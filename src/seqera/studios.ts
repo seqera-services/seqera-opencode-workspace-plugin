@@ -29,19 +29,60 @@ export interface DescribeStudioResponse {
   remoteConfig?: unknown
 }
 
-export async function createStudio(client: SeqeraClient, workspaceId: number, body: CreateStudioRequest): Promise<CreateStudioResponse> {
-  return client.fetchJson<CreateStudioResponse>(`/studios?workspaceId=${workspaceId}&autoStart=true`, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
+function studioPath(sessionId: string, suffix = ''): string {
+  return `/studios/${encodeURIComponent(sessionId)}${suffix}`
 }
 
-export async function describeStudio(client: SeqeraClient, workspaceId: number, sessionId: string): Promise<DescribeStudioResponse> {
-  return client.fetchJson<DescribeStudioResponse>(`/studios/${encodeURIComponent(sessionId)}?workspaceId=${workspaceId}`)
+export async function createStudio(
+  client: SeqeraClient,
+  workspaceId: number,
+  body: CreateStudioRequest,
+): Promise<CreateStudioResponse> {
+  return client.fetchJson<CreateStudioResponse>(
+    `/studios?workspaceId=${workspaceId}&autoStart=true`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
 }
 
-export async function deleteStudio(client: SeqeraClient, workspaceId: number, sessionId: string): Promise<void> {
-  await client.fetchJson<void>(`/studios/${encodeURIComponent(sessionId)}?workspaceId=${workspaceId}`, {
-    method: 'DELETE',
-  })
+export async function describeStudio(
+  client: SeqeraClient,
+  workspaceId: number,
+  sessionId: string,
+): Promise<DescribeStudioResponse> {
+  return client.fetchJson<DescribeStudioResponse>(
+    `${studioPath(sessionId)}?workspaceId=${workspaceId}`,
+  )
+}
+
+export async function startStudio(
+  client: SeqeraClient,
+  workspaceId: number,
+  sessionId: string,
+): Promise<void> {
+  await client.fetchVoid(
+    `${studioPath(sessionId, '/start')}?workspaceId=${workspaceId}`,
+    { method: 'PUT' },
+  )
+}
+
+export async function stopStudio(
+  client: SeqeraClient,
+  workspaceId: number,
+  sessionId: string,
+): Promise<void> {
+  await client.fetchVoid(
+    `${studioPath(sessionId, '/stop')}?workspaceId=${workspaceId}`,
+    { method: 'PUT' },
+  )
+}
+
+export async function deleteStudio(
+  client: SeqeraClient,
+  workspaceId: number,
+  sessionId: string,
+): Promise<void> {
+  await client.fetchVoid(
+    `${studioPath(sessionId)}?workspaceId=${workspaceId}`,
+    { method: 'DELETE' },
+  )
 }
