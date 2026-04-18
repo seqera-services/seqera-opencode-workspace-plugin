@@ -19,6 +19,56 @@ export function buildWorkspaceName(repository: string, branch: string | null, co
   return `${repo}-${safeBranch}-${shortSha}`.toLowerCase()
 }
 
-export async function readGitMetadata(): Promise<GitMetadata> {
-  throw new Error('Git metadata collection is not implemented yet')
+async function exec(cmd: string, args: string[], cwd?: string): Promise<string> {
+  const { execFile } = await import('node:child_process')
+  const { promisify } = await import('node:util')
+  const run = promisify(execFile)
+  const { stdout } = await run(cmd, args, { encoding: 'utf8', cwd })
+  return stdout.trim()
+}
+
+export async function readGitMetadata(cwd?: string): Promise<GitMetadata> {
+  // Verify we're inside a git repo
+  try {
+    await exec('git', ['rev-parse', '--is-inside-work-tree'], cwd)
+  } catch {
+    throw new Error('Not inside a git repository')
+  }
+
+  // Read commit SHA (fails if HEAD is missing)
+  let commitSha: string
+  try {
+    commitSha = await exec('git', ['rev-parse', 'HEAD'], cwd)
+  } catch {
+    throw new Error('HEAD does not point to a valid commit')
+  }
+
+  // Read branch (null when detached)
+  let branch: string | null
+  try {
+    branch = await exec('git', ['symbolic-ref', '--short', 'HEAD'], cwd)
+  } catch {
+    branch = null
+  }
+
+  // Read remote URL — prefer 'origin', fall back to first available
+  let repository: string
+  try {
+    repository = await exec('git', ['remote', 'get-url', 'origin'], cwd)
+  } catch {
+    try {
+      const firstRemote = await exec('git', ['remote'], cwd)
+      const remoteName = firstRemote.split('\n')[0]
+      if (!remoteName) throw new Error('no remotes')
+      repository = await exec('git', ['remote', 'get-url', remoteName], cwd)
+    } catch {
+      throw new Error('No suitable git remote found')
+    }
+  }
+
+  // Check dirty state
+  const status = await exec('git', ['status', '--porcelain'], cwd)
+  const dirty = status.length > 0
+
+  return { repository, branch, commitSha, dirty }
 }
