@@ -48,15 +48,25 @@ function studioPath(sessionId: string, suffix = ''): string {
   return `/studios/${encodeURIComponent(sessionId)}${suffix}`
 }
 
+interface CreateStudioApiResponse {
+  sessionId?: string
+  studio?: { sessionId: string }
+}
+
 export async function createStudio(
   client: SeqeraClient,
   workspaceId: number,
   body: CreateStudioRequest,
 ): Promise<CreateStudioResponse> {
-  return client.fetchJson<CreateStudioResponse>(
+  const raw = await client.fetchJson<CreateStudioApiResponse>(
     `/studios?workspaceId=${workspaceId}&autoStart=true`,
     { method: 'POST', body: JSON.stringify(body) },
   )
+  const sessionId = raw.sessionId ?? raw.studio?.sessionId
+  if (!sessionId) {
+    throw new Error('Seqera API createStudio response missing sessionId')
+  }
+  return { sessionId }
 }
 
 export async function listStudios(

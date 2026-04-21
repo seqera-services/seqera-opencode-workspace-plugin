@@ -24,7 +24,7 @@ describe('createStudio', () => {
   }
 
   // Regression: live Seqera API nests the session under `studio`
-  it.todo('normalizes nested { studio: { sessionId } } response from live API', async () => {
+  it('normalizes nested { studio: { sessionId } } response from live API', async () => {
     const client = fakeClient({ studio: { sessionId: 'sid-nested-123' } })
     const result = await createStudio(client, 42, body)
     assert.equal(result.sessionId, 'sid-nested-123')
