@@ -60,20 +60,6 @@ export interface WorkspaceAdaptor {
   target(info: WorkspaceInfo): WorkspaceTargetValue | Promise<WorkspaceTargetValue>
 }
 
-export interface PluginInput {
-  experimental_workspace: {
-    register(type: string, adaptor: WorkspaceAdaptor): void
-  }
-  project: {
-    id: string
-    name?: string
-  }
-  directory: string
-  worktree: string
-  serverUrl?: URL
+export interface ExperimentalWorkspaceRegistry {
+  register(type: string, adaptor: WorkspaceAdaptor): void
 }
-
-export type Plugin = (
-  input: PluginInput,
-  options?: Partial<SeqeraPluginConfig>,
-) => Promise<Record<string, never>>

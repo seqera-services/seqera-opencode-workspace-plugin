@@ -1,7 +1,7 @@
 import type { StudioWorkspaceExtra } from '../types.js'
 
 export interface BootstrapEnvironmentInput {
-  opencodeAuthContent: string
+  runtimeEnv: Record<string, string | undefined>
   workspaceId: string
   projectId: string
   repository: string
@@ -10,8 +10,12 @@ export interface BootstrapEnvironmentInput {
 }
 
 export function buildStudioBootstrapEnvironment(input: BootstrapEnvironmentInput): Record<string, string> {
+  const base: Record<string, string> = {}
+  for (const [k, v] of Object.entries(input.runtimeEnv)) {
+    if (v !== undefined) base[k] = v
+  }
   return {
-    OPENCODE_AUTH_CONTENT: input.opencodeAuthContent,
+    ...base,
     OPENCODE_WORKSPACE_ID: input.workspaceId,
     OPENCODE_EXPERIMENTAL_WORKSPACES: 'true',
     OPENCODE_PROJECT_ID: input.projectId,

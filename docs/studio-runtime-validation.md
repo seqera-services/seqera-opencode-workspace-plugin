@@ -63,8 +63,8 @@ Caveat:
 Direct CLI attach to the raw Studio URL is still blocked.
 
 Observed behavior with `opencode attach https://<studio-url>`:
-- current local OpenCode clients (`1.2.24` and `1.4.3`) both failed before establishing a usable remote session
-- the failure looked like:
+- current local OpenCode clients (`1.2.24`, `1.4.3`, and `1.14.19`) all failed before establishing a usable remote session
+- the earlier failure looked like:
 
 ```text
 (x6.data ?? []).toSorted is not a function
@@ -110,7 +110,7 @@ The repo now includes the most likely V1 auth bridge:
 3. `src/backends/studio-adaptor.ts` returns those cookies in `target.headers` via a `Cookie` header
 4. Studio creation waits for `/experimental/session` to succeed before returning readiness
 
-The next thing to validate is true end-to-end plugin use inside an OpenCode build that actually supports `experimental_workspace.register(...)`.
+The next thing to validate is true end-to-end workspace creation through the real plugin path now that the local runtime exposes `experimental_workspace.register()`.
 
 If static target headers prove insufficient in that real plugin path, the fallback is still:
 - introduce a small auth-aware relay that sits between OpenCode and the Studio URL

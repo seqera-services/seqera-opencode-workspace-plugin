@@ -1,15 +1,34 @@
 {
   "name": "seqera-opencode-workspace-plugin",
+  "version": "0.1.0",
+  "description": "OpenCode experimental workspace plugin for launching Seqera Studio-backed remote workspaces",
   "private": true,
   "type": "module",
-  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "docs"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "seqera",
+    "studio",
+    "workspace"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf dist",
-    "test": "node --experimental-strip-types --experimental-transform-types --test src/**/*.test.ts"
+    "test": "node --experimental-strip-types --experimental-transform-types --test src/*.test.ts src/**/*.test.ts"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.4.3"
   },
   "devDependencies": {
+    "@opencode-ai/plugin": "^1.4.3",
     "@types/node": "^22.0.0",
     "typescript": "^5.8.0"
   }

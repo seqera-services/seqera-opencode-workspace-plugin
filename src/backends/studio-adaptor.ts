@@ -87,7 +87,7 @@ export function createStudioAdaptor(config: SeqeraPluginConfig, deps: StudioAdap
       const extra = getExtra(info)
 
       const bootstrapEnv = buildStudioBootstrapEnvironment({
-        opencodeAuthContent: env.OPENCODE_AUTH_CONTENT ?? '',
+        runtimeEnv: env,
         workspaceId: info.id,
         projectId: info.projectID,
         repository: extra.repository,
