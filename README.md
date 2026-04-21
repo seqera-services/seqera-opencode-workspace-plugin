@@ -16,6 +16,10 @@ Docs captured in this repo
 - `docs/initial-plugin-spec.md` — explicit V1 scope, contracts, and acceptance criteria
 - `docs/plans/2026-04-18-seqera-opencode-workspace-plugin.md` — implementation plan
 
+Studio runtime scaffold
+- `.seqera/` — minimal Seqera Studio image that runs `opencode serve` behind `connect-client`
+- This runtime has been Wave-built and launched successfully in the dev Seqera environment.
+
 Important upstream note
 - The OpenCode gist and internal control-plane types expect `create(info, env, from?)` for workspace adaptors.
 - The current `@opencode-ai/plugin` dev package type snapshot still shows `create(config, from?)`.

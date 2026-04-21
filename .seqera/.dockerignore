@@ -1,0 +1,6 @@
+.git
+.jj
+.opencode
+.claude
+node_modules
+.DS_Store
