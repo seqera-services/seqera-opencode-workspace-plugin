@@ -109,9 +109,21 @@ The repo now includes the most likely V1 auth bridge:
 2. it mints `connect-auth-*` cookies for the specific Studio URL
 3. `src/backends/studio-adaptor.ts` returns those cookies in `target.headers` via a `Cookie` header
 4. GitHub SSH remotes are normalized to HTTPS before Studio creation so Seqera can clone the public repo
-5. Studio creation waits for `/experimental/session` to succeed before returning readiness
+5. the create path succeeds once Seqera returns a `studioUrl`, and `target()` performs the cookie exchange later
+6. the Seqera `/studios` list response is normalized from `{ studios: [...] }` before adoption fallback runs
+7. `npm run test:live` now captures the real end-to-end create path against a live Seqera workspace when the required environment variables are set
+8. the live harness builds and loads the plugin from a clean temporary git worktree, so a dirty local checkout no longer blocks the test itself
+9. when the create path fails, the harness now prints a per-endpoint Seqera API diagnosis (`list`, `describe`, `create-probe`) before the OpenCode log tail
 
 The next thing to validate is true end-to-end workspace creation through the real plugin path now that the local runtime exposes `experimental_workspace.register()`.
+
+Latest live result from the improved harness:
+- `list` succeeded with `200 OK`
+- `describe` succeeded with `200 OK`
+- `create-probe` returned `403 Forbidden`
+- the plugin-backed `POST /experimental/workspace` failed with `500` wrapping `Seqera API 403 Forbidden`
+
+That narrows the current live failure to Studio creation permissions specifically, not basic API reachability or Studio lookup/describe access.
 
 If static target headers prove insufficient in that real plugin path, the fallback is still:
 - introduce a small auth-aware relay that sits between OpenCode and the Studio URL

@@ -41,6 +41,24 @@ Docs captured in this repo
 - `docs/plans/2026-04-18-seqera-opencode-workspace-plugin.md` — implementation plan
 - `docs/studio-runtime-validation.md` — empirical validation notes for the Studio runtime and auth chain
 
+Live integration test
+- `npm run test:live` runs an opt-in end-to-end create-path test against a real Seqera workspace.
+- Required environment variables:
+  - `SEQERA_LIVE_INTEGRATION=1`
+  - `SEQERA_API_BASE_URL`
+  - `SEQERA_API_TOKEN`
+  - `SEQERA_WORKSPACE_ID`
+  - `SEQERA_COMPUTE_ENV_ID`
+  - `SEQERA_DATA_STUDIO_TOOL_URL`
+- Optional overrides:
+  - `SEQERA_DEFAULT_SPOT`
+  - `SEQERA_DEFAULT_LIFESPAN_HOURS`
+  - `SEQERA_STUDIO_POLL_TIMEOUT_MS`
+  - `SEQERA_STUDIO_POLL_INTERVAL_MS`
+- The script builds the plugin inside a clean temporary git worktree (default ref: `origin/main`, override with `SEQERA_LIVE_TEST_GIT_REF`), launches an isolated `opencode serve`, creates a real `seqera-studio` workspace, asserts the returned workspace record contains `extra.sessionId` and `extra.studioUrl`, then stops/deletes the remote Studio.
+- The harness points OpenCode at that clean worktree plugin revision, so your local repo can stay dirty while the live test still exercises a committed revision.
+- On failure, the harness now prints an explicit Seqera API diagnosis for `list`, `describe`, and a `create-probe`, so it can distinguish a create-only permission problem from broader API/auth failures.
+
 Studio runtime scaffold
 - `.seqera/` — minimal Seqera Studio image that runs `opencode serve` behind `connect-client`
 - This runtime has been Wave-built and launched successfully in the dev Seqera environment.
