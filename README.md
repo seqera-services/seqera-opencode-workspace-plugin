@@ -14,6 +14,7 @@ Why
 Current implementation status
 - `src/backends/studio-adaptor.ts` now returns auth-aware remote targets for Studios.
 - `src/seqera/studio-auth.ts` reproduces the Seqera authorize flow, mints Studio `connect-auth-*` cookies, and returns them via a `Cookie` header for the remote target.
+- GitHub SSH remotes are normalized to `https://github.com/...` before Studio creation so Seqera can clone public repos without needing SSH credentials.
 - Studio creation now waits for an app-level `/experimental/session` probe to succeed before treating the Studio as ready.
 - The installed OpenCode runtime here now exposes `experimental_workspace.register()` and passes the bootstrap env map as the second `create(...)` argument at runtime.
 - The published `@opencode-ai/plugin` typings still lag on the workspace adaptor contract, so this repo keeps a local shim for the `create(info, env, from?)` shape.

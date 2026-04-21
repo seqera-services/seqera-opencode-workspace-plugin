@@ -19,6 +19,22 @@ export function buildWorkspaceName(repository: string, branch: string | null, co
   return `${repo}-${safeBranch}-${shortSha}`.toLowerCase()
 }
 
+function normalizeRepositoryUrl(repository: string): string {
+  const githubSshMatch = repository.match(/^git@github\.com:([^/]+)\/([^\s]+?)(?:\.git)?$/i)
+  if (githubSshMatch) {
+    const [, owner, repo] = githubSshMatch
+    return `https://github.com/${owner}/${repo}.git`
+  }
+
+  const githubSshUrlMatch = repository.match(/^ssh:\/\/git@github\.com\/([^/]+)\/([^\s]+?)(?:\.git)?$/i)
+  if (githubSshUrlMatch) {
+    const [, owner, repo] = githubSshUrlMatch
+    return `https://github.com/${owner}/${repo}.git`
+  }
+
+  return repository
+}
+
 async function exec(cmd: string, args: string[], cwd?: string): Promise<string> {
   const { execFile } = await import('node:child_process')
   const { promisify } = await import('node:util')
@@ -70,5 +86,5 @@ export async function readGitMetadata(cwd?: string): Promise<GitMetadata> {
   const status = await exec('git', ['status', '--porcelain'], cwd)
   const dirty = status.length > 0
 
-  return { repository, branch, commitSha, dirty }
+  return { repository: normalizeRepositoryUrl(repository), branch, commitSha, dirty }
 }

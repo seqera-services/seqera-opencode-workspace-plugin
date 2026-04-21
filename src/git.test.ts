@@ -90,6 +90,13 @@ describe('readGitMetadata', () => {
     assert.equal(meta.dirty, false)
   })
 
+  it('normalizes GitHub SSH remotes to https for Studio cloning', async () => {
+    await git(['remote', 'set-url', 'origin', 'git@github.com:org/repo.git'], dir)
+    const meta = await readGitMetadata(dir)
+    assert.equal(meta.repository, 'https://github.com/org/repo.git')
+    await git(['remote', 'set-url', 'origin', 'https://github.com/org/repo.git'], dir)
+  })
+
   it('reports dirty when working tree has changes', async () => {
     await execFile('touch', ['untracked.txt'], { cwd: dir })
     const meta = await readGitMetadata(dir)

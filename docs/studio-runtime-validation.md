@@ -108,7 +108,8 @@ The repo now includes the most likely V1 auth bridge:
 1. `src/seqera/studio-auth.ts` reproduces the Seqera authorize flow
 2. it mints `connect-auth-*` cookies for the specific Studio URL
 3. `src/backends/studio-adaptor.ts` returns those cookies in `target.headers` via a `Cookie` header
-4. Studio creation waits for `/experimental/session` to succeed before returning readiness
+4. GitHub SSH remotes are normalized to HTTPS before Studio creation so Seqera can clone the public repo
+5. Studio creation waits for `/experimental/session` to succeed before returning readiness
 
 The next thing to validate is true end-to-end workspace creation through the real plugin path now that the local runtime exposes `experimental_workspace.register()`.
 
