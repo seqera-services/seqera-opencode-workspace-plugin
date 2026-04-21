@@ -152,8 +152,15 @@ test('live Seqera Studio create path returns a usable workspace record', { skip:
     const listedBody = await listed.json() as Array<{ id: string, extra?: { sessionId?: string | null, studioUrl?: string | null } }>
     const created = listedBody.find((item) => item.id === localWorkspaceId)
     assert.ok(created, 'expected created workspace to appear in the local workspace list')
-    assert.equal(created?.extra?.sessionId, sessionId)
-    assert.ok(created?.extra?.studioUrl)
+
+    await waitFor(async () => {
+      const remoteStudio = await fetch(`${apiBaseUrl}/studios/${encodeURIComponent(sessionId)}?workspaceId=${workspaceId}`, {
+        headers: { Authorization: `Bearer ${apiToken}` },
+      })
+      if (remoteStudio.status !== 200) return false
+      const remoteStudioBody = await remoteStudio.json() as { studioUrl?: string | null, statusInfo?: { status?: string | null } }
+      return remoteStudioBody.studioUrl === workspace.extra?.studioUrl && remoteStudioBody.statusInfo?.status?.toLowerCase() === 'running'
+    }, 120_000, 2_000)
   } finally {
     child.kill('SIGTERM')
     await Promise.race([once(child, 'exit'), sleep(5_000)])
