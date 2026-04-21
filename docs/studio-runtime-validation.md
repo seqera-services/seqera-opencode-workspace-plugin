@@ -60,23 +60,33 @@ Caveat:
 
 ## Attach/session flow findings
 
-Local attach to a local OpenCode 1.4.3 server worked well enough to enter the interactive TUI bootstrap path.
-
-However, direct CLI attach to the Studio URL is still blocked.
+Direct CLI attach to the raw Studio URL is still blocked.
 
 Observed behavior with `opencode attach https://<studio-url>`:
-- current local OpenCode clients (`1.2.24` and downloaded `1.4.3`) both failed before establishing a usable remote session
+- current local OpenCode clients (`1.2.24` and `1.4.3`) both failed before establishing a usable remote session
 - the failure looked like:
 
 ```text
 (x6.data ?? []).toSorted is not a function
 ```
 
-This happened specifically on remote Studio attach attempts and did not reproduce the same way on local attach.
+Source inspection of OpenCode `1.4.3` showed that the attach TUI bootstrap calls `sdk.client.session.list(...).then((x) => (x.data ?? []).toSorted(...))` very early in `packages/opencode/src/cli/cmd/tui/context/sync.tsx`.
 
-Separate from that client-side failure, `opencode attach` also has no built-in way to perform the Seqera Studio authorize flow and obtain `connect-auth-*` cookies before speaking to the Studio-hosted OpenCode server.
+The critical follow-up experiment was:
+1. mint valid Seqera Studio `connect-auth-*` cookies through the authorize flow
+2. place a tiny local reverse proxy in front of the Studio URL that injects those cookies on every request
+3. run `opencode attach http://127.0.0.1:<proxy-port>` against that proxy
 
-So the remaining blocker is not the runtime container. It is the client/auth integration path.
+Result:
+- attach through the cookie-injecting proxy advanced past the previous `.toSorted(...)` crash and entered the normal TUI bootstrap path
+- the same `1.4.3` client still crashed immediately when pointed at the raw Studio URL
+
+This strongly suggests the remaining attach blocker is the Studio auth boundary, not a deeper incompatibility between the OpenCode client and the Studio-hosted OpenCode server.
+
+In other words:
+- raw `studioUrl` is not sufficient
+- an auth-aware target that injects the Studio cookies is likely sufficient
+- a full extra relay may not be necessary if the workspace target can return the right headers/cookies
 
 ## Comparison with Daytona plugin model
 
@@ -96,8 +106,13 @@ It does not yet implement the Daytona-style plugin behavior.
 
 The next implementation step should be to bridge the OpenCode client to the Studio-hosted server by handling Studio auth explicitly.
 
-Likely directions:
-1. have the workspace plugin exchange the Platform bearer token for Studio auth and return the necessary headers/cookies for the remote target, or
-2. introduce a small auth-aware relay that sits between OpenCode and the Studio URL
+Most likely V1 direction:
+1. have the workspace plugin exchange the Platform bearer token for Studio auth
+2. mint `connect-auth-*` cookies for the specific Studio URL
+3. return those cookies in `target.headers`, for example via a `Cookie` header on the remote target
+4. probe an app-level endpoint like `/experimental/session` with those headers before returning the target
 
-Without solving that auth/client gap, the runtime is proven but the full remote workspace experience is not.
+Fallback if static target headers prove insufficient:
+- introduce a small auth-aware relay that sits between OpenCode and the Studio URL
+
+The proxy experiment indicates that solving the auth/header bridge may be enough by itself. Without that auth/client gap closed, the runtime is proven but the full remote workspace experience is not.
