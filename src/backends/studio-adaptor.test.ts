@@ -54,6 +54,7 @@ function stubDeps(overrides: Record<string, unknown> = {}) {
       return { sessionId: 'sess-1', studioUrl: null }
     },
     deleteStudio: async (_client: SeqeraClient, _wsId: number, _sessionId: string): Promise<void> => {},
+    resolveTargetHeaders: async (_studioUrl: string): Promise<Record<string, string> | undefined> => undefined,
     sleep: async (_ms: number): Promise<void> => {},
     ...overrides,
   }
@@ -198,6 +199,33 @@ describe('studio adaptor — create', () => {
       { message: /timeout|timed out/i },
     )
   })
+
+  it('retries readiness probing after the Studio URL appears', async () => {
+    let describeCount = 0
+    let readinessCount = 0
+    const deps = stubDeps({
+      describeStudio: async () => {
+        describeCount++
+        return { sessionId: 'sess-ready', studioUrl: 'https://studio.test/sess-ready', statusInfo: { status: 'RUNNING' } }
+      },
+      resolveTargetHeaders: async () => {
+        readinessCount++
+        if (readinessCount < 2) {
+          throw new Error('OpenCode app not ready yet')
+        }
+        return { Cookie: 'connect-auth-sub=184; connect-auth-tokens=abc' }
+      },
+    })
+    const adaptor = createStudioAdaptor(baseConfig, deps)
+    const info = makeConfiguredInfo()
+
+    await adaptor.create(info, { OPENCODE_AUTH_CONTENT: 'auth-data' })
+
+    assert.equal(describeCount, 2)
+    assert.equal(readinessCount, 2)
+    const extra = info.extra as StudioWorkspaceExtra
+    assert.equal(extra.studioUrl, 'https://studio.test/sess-ready')
+  })
 })
 
 describe('studio adaptor — remove', () => {
@@ -253,7 +281,34 @@ describe('studio adaptor — remove', () => {
 })
 
 describe('studio adaptor — target', () => {
-  it('returns remote target with studioUrl', () => {
+  it('returns remote target with studioUrl and resolved headers', async () => {
+    const adaptor = createStudioAdaptor(baseConfig, stubDeps({
+      resolveTargetHeaders: async () => ({ Cookie: 'connect-auth-sub=184; connect-auth-tokens=abc' }),
+    }))
+    const extra: StudioWorkspaceExtra = {
+      backend: 'studio',
+      sessionId: 'sess-t',
+      workspaceId: 42,
+      computeEnvId: 'ce-123',
+      studioUrl: 'https://studio.test/sess-t',
+      repository: 'https://github.com/org/repo.git',
+      revision: 'main',
+      commitId: 'abc123',
+      branch: 'main',
+      imageOrToolUrl: 'https://tool.test/studio',
+      spot: false,
+      requestedAt: '2026-01-01T00:00:00.000Z',
+      lastKnownStatus: 'RUNNING',
+    }
+    const target = await adaptor.target(makeInfo({ extra }))
+    assert.deepStrictEqual(target, {
+      type: 'remote',
+      url: 'https://studio.test/sess-t',
+      headers: { Cookie: 'connect-auth-sub=184; connect-auth-tokens=abc' },
+    })
+  })
+
+  it('returns remote target without headers when auth exchange is unnecessary', async () => {
     const adaptor = createStudioAdaptor(baseConfig, stubDeps())
     const extra: StudioWorkspaceExtra = {
       backend: 'studio',
@@ -270,11 +325,11 @@ describe('studio adaptor — target', () => {
       requestedAt: '2026-01-01T00:00:00.000Z',
       lastKnownStatus: 'RUNNING',
     }
-    const target = adaptor.target(makeInfo({ extra }))
+    const target = await adaptor.target(makeInfo({ extra }))
     assert.deepStrictEqual(target, { type: 'remote', url: 'https://studio.test/sess-t' })
   })
 
-  it('throws when studioUrl is not available', () => {
+  it('throws when studioUrl is not available', async () => {
     const adaptor = createStudioAdaptor(baseConfig, stubDeps())
     const extra: StudioWorkspaceExtra = {
       backend: 'studio',
@@ -291,7 +346,7 @@ describe('studio adaptor — target', () => {
       requestedAt: '2026-01-01T00:00:00.000Z',
       lastKnownStatus: null,
     }
-    assert.throws(
+    await assert.rejects(
       () => adaptor.target(makeInfo({ extra })),
       { message: /no studio url/i },
     )

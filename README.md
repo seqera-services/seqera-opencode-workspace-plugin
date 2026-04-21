@@ -11,6 +11,12 @@ Why
 - Seqera Studios already return a `studioUrl` and have lifecycle APIs (`create`, `describe`, `start`, `stop`, `delete`).
 - Seqera Scheduler sandboxes have better bootstrap primitives (`envVars`, file APIs, exec APIs), but the public schema currently exposes no ingress URL or port-forward API, which makes them a poor direct fit for `target(): { type: "remote", url }` today.
 
+Current implementation status
+- `src/backends/studio-adaptor.ts` now returns auth-aware remote targets for Studios.
+- `src/seqera/studio-auth.ts` reproduces the Seqera authorize flow, mints Studio `connect-auth-*` cookies, and returns them via a `Cookie` header for the remote target.
+- Studio creation now waits for an app-level `/experimental/session` probe to succeed before treating the Studio as ready.
+- The remaining practical limitation is local client support: the installed OpenCode `1.2.24` on this machine still lacks the experimental workspace plugin API needed to load this plugin directly.
+
 Docs captured in this repo
 - `docs/plugin-design.md` — architecture and API mapping
 - `docs/initial-plugin-spec.md` — explicit V1 scope, contracts, and acceptance criteria

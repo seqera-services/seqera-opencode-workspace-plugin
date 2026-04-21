@@ -232,10 +232,10 @@ Return
 ```
 
 Important open questions
-- **Studio auth chain**: in dev validation, `studioUrl` did not accept the Platform bearer token directly. It first redirected through the Seqera authorize flow, which minted `connect-auth-*` cookies for the Studio host. The plugin should likely reproduce that exchange inside `target()` and return a `Cookie` header on the remote target.
-- **Attach compatibility**: direct `opencode attach` to the raw Studio URL still failed from local clients (`1.2.24` and `1.4.3`) before a usable remote session formed. However, the same `1.4.3` client advanced past the previous `.toSorted(...)` crash when pointed at a tiny local reverse proxy that injected the valid Studio cookies. That suggests auth/header bridging is the real blocker.
+- **Studio auth chain**: in dev validation, `studioUrl` did not accept the Platform bearer token directly. It first redirected through the Seqera authorize flow, which minted `connect-auth-*` cookies for the Studio host. The repo now has a V1 implementation of that exchange in `src/seqera/studio-auth.ts`, and `target()` returns the resulting `Cookie` header on the remote target.
+- **Attach compatibility**: direct `opencode attach` to the raw Studio URL still failed from local clients (`1.2.24` and `1.4.3`) before a usable remote session formed. However, the same `1.4.3` client advanced past the previous `.toSorted(...)` crash when pointed at a tiny local reverse proxy that injected the valid Studio cookies. The remaining thing to prove is true end-to-end plugin execution with a plugin-capable OpenCode build.
 - **Port/path routing**: with valid Studio auth cookies, the OpenCode app was reachable and `/sync/replay` returned `200`, but we still need to prove semantic replay/session-restore behavior, not just route reachability.
-- **Inner-process readiness**: Studio status `RUNNING` means the container is up, not that `opencode serve` is listening. After Studio reports running, `create()` should probe an application-level health endpoint before returning.
+- **Inner-process readiness**: Studio status `RUNNING` means the container is up, not that `opencode serve` is listening. The adaptor now probes `/experimental/session` through the auth exchange before treating the Studio as ready, but this still needs validation against a real plugin-capable client build.
 
 #### `remove(info)`
 

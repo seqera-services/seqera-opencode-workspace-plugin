@@ -104,15 +104,15 @@ It does not yet implement the Daytona-style plugin behavior.
 
 ## Highest-value next step
 
-The next implementation step should be to bridge the OpenCode client to the Studio-hosted server by handling Studio auth explicitly.
+The repo now includes the most likely V1 auth bridge:
+1. `src/seqera/studio-auth.ts` reproduces the Seqera authorize flow
+2. it mints `connect-auth-*` cookies for the specific Studio URL
+3. `src/backends/studio-adaptor.ts` returns those cookies in `target.headers` via a `Cookie` header
+4. Studio creation waits for `/experimental/session` to succeed before returning readiness
 
-Most likely V1 direction:
-1. have the workspace plugin exchange the Platform bearer token for Studio auth
-2. mint `connect-auth-*` cookies for the specific Studio URL
-3. return those cookies in `target.headers`, for example via a `Cookie` header on the remote target
-4. probe an app-level endpoint like `/experimental/session` with those headers before returning the target
+The next thing to validate is true end-to-end plugin use inside an OpenCode build that actually supports `experimental_workspace.register(...)`.
 
-Fallback if static target headers prove insufficient:
+If static target headers prove insufficient in that real plugin path, the fallback is still:
 - introduce a small auth-aware relay that sits between OpenCode and the Studio URL
 
-The proxy experiment indicates that solving the auth/header bridge may be enough by itself. Without that auth/client gap closed, the runtime is proven but the full remote workspace experience is not.
+The proxy experiment and the current implementation both point to auth/header bridging as the key V1 requirement.

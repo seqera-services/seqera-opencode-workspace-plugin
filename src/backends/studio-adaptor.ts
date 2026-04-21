@@ -9,6 +9,7 @@ import {
   describeStudio as defaultDescribeStudio,
   deleteStudio as defaultDeleteStudio,
 } from '../seqera/studios.js'
+import { mintStudioAuthHeaders } from '../seqera/studio-auth.js'
 import { buildStudioBootstrapEnvironment, buildStudioWorkspaceExtra } from '../bootstrap/env.js'
 
 export interface StudioAdaptorDeps {
@@ -16,6 +17,7 @@ export interface StudioAdaptorDeps {
   createStudio(client: SeqeraClient, workspaceId: number, body: CreateStudioRequest): Promise<CreateStudioResponse>
   describeStudio(client: SeqeraClient, workspaceId: number, sessionId: string): Promise<DescribeStudioResponse>
   deleteStudio(client: SeqeraClient, workspaceId: number, sessionId: string): Promise<void>
+  resolveTargetHeaders?(studioUrl: string): Promise<Record<string, string> | undefined>
   sleep(ms: number): Promise<void>
 }
 
@@ -31,8 +33,25 @@ function getExtra(info: WorkspaceInfo): StudioWorkspaceExtra {
   return info.extra as StudioWorkspaceExtra
 }
 
+function deriveAuthorizeOrigins(apiBaseUrl: string): string[] {
+  const apiUrl = new URL(apiBaseUrl)
+  const origins = new Set<string>([apiUrl.origin])
+  if (apiUrl.hostname.startsWith('api.')) {
+    const uiUrl = new URL(apiUrl.toString())
+    uiUrl.hostname = uiUrl.hostname.slice(4)
+    origins.add(uiUrl.origin)
+  }
+  return Array.from(origins)
+}
+
 export function createStudioAdaptor(config: SeqeraPluginConfig, deps: StudioAdaptorDeps = defaultDeps): WorkspaceAdaptor {
   const client = createSeqeraClient(config)
+  const resolveTargetHeaders = deps.resolveTargetHeaders ?? (async (studioUrl: string) =>
+    mintStudioAuthHeaders({
+      studioUrl,
+      apiToken: config.apiToken,
+      allowedAuthorizeOrigins: deriveAuthorizeOrigins(config.apiBaseUrl),
+    }))
 
   return {
     name: 'Seqera Studio',
@@ -98,17 +117,24 @@ export function createStudioAdaptor(config: SeqeraPluginConfig, deps: StudioAdap
       extra.sessionId = sessionId
 
       const deadline = Date.now() + config.studioPollTimeoutMs
+      let lastReadinessError: Error | undefined
       while (Date.now() < deadline) {
         const status = await deps.describeStudio(client, config.workspaceId, sessionId)
         if (status.studioUrl) {
           extra.studioUrl = status.studioUrl
           extra.lastKnownStatus = 'RUNNING'
-          return
+          try {
+            await resolveTargetHeaders(status.studioUrl)
+            return
+          } catch (error) {
+            lastReadinessError = error instanceof Error ? error : new Error(String(error))
+          }
         }
         await deps.sleep(config.studioPollIntervalMs)
       }
 
-      throw new Error(`Studio ${sessionId} timed out waiting for readiness`)
+      const suffix = lastReadinessError ? ` — ${lastReadinessError.message}` : ''
+      throw new Error(`Studio ${sessionId} timed out waiting for readiness${suffix}`)
     },
 
     async remove(info: WorkspaceInfo): Promise<void> {
@@ -118,12 +144,15 @@ export function createStudioAdaptor(config: SeqeraPluginConfig, deps: StudioAdap
       }
     },
 
-    target(info: WorkspaceInfo): WorkspaceTargetValue {
+    async target(info: WorkspaceInfo): Promise<WorkspaceTargetValue> {
       const extra = getExtra(info)
       if (!extra.studioUrl) {
         throw new Error('No studio URL available — workspace may not be running')
       }
-      return { type: 'remote', url: extra.studioUrl }
+      const headers = await resolveTargetHeaders(extra.studioUrl)
+      return headers
+        ? { type: 'remote', url: extra.studioUrl, headers }
+        : { type: 'remote', url: extra.studioUrl }
     },
   }
 }
