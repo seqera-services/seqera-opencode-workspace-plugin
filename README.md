@@ -15,6 +15,7 @@ Docs captured in this repo
 - `docs/plugin-design.md` — architecture and API mapping
 - `docs/initial-plugin-spec.md` — explicit V1 scope, contracts, and acceptance criteria
 - `docs/plans/2026-04-18-seqera-opencode-workspace-plugin.md` — implementation plan
+- `docs/studio-runtime-validation.md` — empirical validation notes for the Studio runtime and auth chain
 
 Studio runtime scaffold
 - `.seqera/` — minimal Seqera Studio image that runs `opencode serve` behind `connect-client`

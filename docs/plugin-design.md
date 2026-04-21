@@ -65,7 +65,8 @@ Weaknesses
 - No file upload API in the public Platform Studio API docs.
 - Cleanly supports committed Git revisions; does not naturally support dirty local trees.
 - Requires a custom image/tool setup that starts `opencode serve` as the primary app behind the Studio URL.
-- We still need to confirm that `studioUrl` accepts bearer-token auth from OpenCode’s backend, not only browser cookies.
+- The Studio URL is not directly bearer-token accessible. In dev validation, it first required the Seqera authorize flow to mint `connect-auth-*` cookies before the OpenCode server became reachable.
+- `OPENCODE_SERVER_PASSWORD` is optional for Studio use. With Studio auth cookies present, a runtime without that variable served OpenCode normally.
 
 ### Option B: Seqera Scheduler sandbox
 
@@ -231,8 +232,9 @@ Return
 ```
 
 Important open questions
-- **Auth domain mismatch**: `apiToken` authenticates to the Platform API, but `studioUrl` is a different endpoint likely behind session-cookie auth. These are almost certainly separate auth domains. If Studio URLs don’t accept bearer tokens, V1 needs an auth-aware relay or a Studio-issued session token.
-- **Port/path routing**: `opencode serve` binds to a specific port (default unknown). Studio URLs proxy to the tool’s expected port. We must confirm which port Studio expects the tool process to listen on, and whether the proxy is path-transparent (i.e., `/sync/replay` reaches the inner process correctly).
+- **Studio auth chain**: in dev validation, `studioUrl` did not accept the Platform bearer token directly. It first redirected through the Seqera authorize flow, which minted `connect-auth-*` cookies for the Studio host. The plugin will need to reproduce or relay that auth step somehow.
+- **Attach compatibility**: direct `opencode attach` to the Studio URL still failed from local clients (`1.2.24` and `1.4.3`) before a usable remote session formed, even after the runtime itself was proven to be OpenCode.
+- **Port/path routing**: with valid Studio auth cookies, the OpenCode app was reachable and `/sync/replay` returned `200`, but we still need to prove semantic replay/session-restore behavior, not just route reachability.
 - **Inner-process readiness**: Studio status `RUNNING` means the container is up, not that `opencode serve` is listening. After Studio reports running, `create()` should probe an application-level health endpoint before returning.
 
 #### `remove(info)`
