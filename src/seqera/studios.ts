@@ -29,6 +29,21 @@ export interface DescribeStudioResponse {
   remoteConfig?: unknown
 }
 
+export interface ListStudiosItem {
+  sessionId: string
+  name?: string
+  studioUrl?: string | null
+  statusInfo?: unknown
+}
+
+export interface ListStudiosResponse {
+  sessions: ListStudiosItem[]
+}
+
+interface ListStudiosApiResponse {
+  studios?: ListStudiosItem[]
+}
+
 function studioPath(sessionId: string, suffix = ''): string {
   return `/studios/${encodeURIComponent(sessionId)}${suffix}`
 }
@@ -42,6 +57,16 @@ export async function createStudio(
     `/studios?workspaceId=${workspaceId}&autoStart=true`,
     { method: 'POST', body: JSON.stringify(body) },
   )
+}
+
+export async function listStudios(
+  client: SeqeraClient,
+  workspaceId: number,
+): Promise<ListStudiosResponse> {
+  const response = await client.fetchJson<ListStudiosApiResponse>(
+    `/studios?workspaceId=${workspaceId}`,
+  )
+  return { sessions: response.studios ?? [] }
 }
 
 export async function describeStudio(
