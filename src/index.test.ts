@@ -71,6 +71,64 @@ describe('index plugin entrypoint', () => {
     )
   })
 
+  it('undefined plugin options must not wipe env-derived Seqera config', async () => {
+    const originalEnv = { ...process.env }
+    process.env.SEQERA_API_TOKEN = 'env-token-abc'
+    process.env.SEQERA_API_BASE_URL = 'https://env.seqera.test'
+    process.env.SEQERA_WORKSPACE_ID = '99'
+    process.env.SEQERA_COMPUTE_ENV_ID = 'ce-env-456'
+    process.env.SEQERA_DATA_STUDIO_TOOL_URL = 'https://env.tool.test/studio'
+
+    try {
+      // Simulate runtime options where some keys are explicitly undefined
+      const plugin = createSeqeraWorkspacePlugin()
+
+      let registeredAdaptor: WorkspaceAdaptor | undefined
+      await plugin({
+        client: {} as never,
+        directory: '/tmp/repo',
+        worktree: '/tmp/repo',
+        serverUrl: new URL('http://127.0.0.1:4096'),
+        $: {} as never,
+        project: { id: 'proj-123' } as never,
+        experimental_workspace: {
+          register(_type: string, adaptor: WorkspaceAdaptor) {
+            registeredAdaptor = adaptor
+          },
+        },
+      } as never, {
+        apiToken: undefined,
+        apiBaseUrl: undefined,
+        workspaceId: undefined,
+        computeEnvId: undefined,
+        dataStudioToolUrl: undefined,
+      } as never)
+
+      // The env-derived config must survive undefined overrides
+      // We can't inspect config directly, but the adaptor should exist
+      // and the config should have env values, not empty/zero defaults
+      assert.ok(registeredAdaptor)
+
+      // Use loadSeqeraPluginConfig directly to verify
+      const { loadSeqeraPluginConfig } = await import('./seqera/config.ts')
+      const config = loadSeqeraPluginConfig({
+        apiToken: undefined,
+        apiBaseUrl: undefined,
+        workspaceId: undefined,
+        computeEnvId: undefined,
+        dataStudioToolUrl: undefined,
+      } as never)
+
+      assert.equal(config.apiToken, 'env-token-abc')
+      assert.equal(config.apiBaseUrl, 'https://env.seqera.test')
+      assert.equal(config.workspaceId, 99)
+      assert.equal(config.computeEnvId, 'ce-env-456')
+      assert.equal(config.dataStudioToolUrl, 'https://env.tool.test/studio')
+    } finally {
+      process.env = originalEnv
+    }
+  })
+
   it('exports a ready-to-load default server plugin', async () => {
     let registeredType: string | undefined
 
